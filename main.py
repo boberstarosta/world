@@ -1,44 +1,33 @@
 import itertools
-import logging
 import pyglet
 import settings
 
-
+import logging
 logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.DEBUG)
+
+from world import content
+from world import graphics
+from world import world
 
 
 class GameWindow(pyglet.window.Window):
     def __init__(self):
         logging.info("Initializing GameWindow")
-        super().__init__(width=settings.width, height=settings.height)
+        super().__init__(width=settings.WIDTH, height=settings.HEIGHT)
         self.set_caption("World")
-        pyglet.clock.schedule_interval(self.on_update, 1/settings.frames_per_second)
-        self.batch = pyglet.graphics.Batch()
-        self.content = self.load_content()
-        self.layers = self.setup_layers()
+        graphics.init(self)
+        pyglet.clock.schedule_interval(self.on_update, 1/settings.FRAMES_PER_SECOND)
         self.cursor_sprite = pyglet.sprite.Sprite(
-            img=self.content["cursor"],
-            batch=self.batch,
-            group=self.layers["cursor"]
+            img=content.image("cursor.png"),
+            batch=graphics.batch,
+            group=graphics.groups["cursor"]
         )
-
-    def load_content(self):
-        logging.info(f"Loading content")
-        pyglet.resource.path = ["content"]
-        pyglet.resource.reindex()
-        return {
-            "cursor": pyglet.resource.image("cursor.png")
-        }
-
-    def setup_layers(self):
-        order = itertools.count()
-        return {
-            "cursor": pyglet.graphics.OrderedGroup(next(order))
-        }
+        self.world = world.World()
 
     def on_mouse_motion(self, x, y, dx, dy):
-        logging.debug(f"Mouse move at {x, y}")
-        self.cursor_sprite.position = (x, y)
+        coords = world.coords_from_screen(x, y)
+        self.cursor_sprite.position = world.position_from_coords(*coords)
+        logging.debug(f"Mouse move at {x, y}, coords={coords}")
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         logging.debug(f"Mouse drag buttons {buttons} at {x, y}")
@@ -56,8 +45,9 @@ class GameWindow(pyglet.window.Window):
         pass
 
     def on_draw(self):
+        pyglet.gl.glClearColor(*settings.BACKGROUND_COLOR)
         self.clear()
-        self.batch.draw()
+        graphics.batch.draw()
 
 
 window = GameWindow()
